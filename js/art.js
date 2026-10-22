@@ -12,7 +12,7 @@
   const THEMES = {
     park: { sky: ['#47a8ff', '#c6ecff'], fog: '#c6ecff', top: '#c07b42', side: '#8c552b', layer: '#6e3f1f', ground: '#6cc24a', ground2: '#58ad3a', far: ['#8fd06a', '#6fb455', '#4f9a44'], flag: '#ff3d7f', sun: '#fff3b0' },
     desert: { sky: ['#ff8f5a', '#ffe0a8'], fog: '#ffd8a6', top: '#e39a52', side: '#b9692f', layer: '#9a5224', ground: '#f2bd74', ground2: '#e3a65e', far: ['#e08a4e', '#c8703e', '#a85a34'], flag: '#18d4ff', sun: '#fff0c0' },
-    snow: { sky: ['#7fbfff', '#eef7ff'], fog: '#eef7ff', top: '#f6faff', side: '#a7bdd6', layer: '#8aa2c0', ground: '#ffffff', ground2: '#e6eff8', far: ['#d8e6f6', '#b9cde6', '#9db6d6'], flag: '#ff4b5c', sun: '#ffffff' },
+    snow: { sky: ['#7fbfff', '#eef7ff'], fog: '#eef7ff', top: '#f6faff', side: '#a7bdd6', layer: '#8aa2c0', ground: '#e2edf8', ground2: '#cfdff0', far: ['#d8e6f6', '#b9cde6', '#9db6d6'], flag: '#ff4b5c', sun: '#ffffff' },
     night: { sky: ['#070b26', '#2b2a6e'], fog: '#1c1d4e', top: '#8a6aa0', side: '#3f2d58', layer: '#2f2044', ground: '#26355f', ground2: '#1f2c52', far: ['#2a3070', '#22285e', '#1a1f4c'], flag: '#ffd400', moon: true, neon: '#18d4ff' },
   };
 
@@ -308,44 +308,45 @@
     const [c, g] = G.makeCanvas(256, 32);
     for (let i = 0; i < 16; i++) { g.fillStyle = i % 2 ? '#14121f' : '#ffd400'; g.beginPath(); g.moveTo(i * 16, 32); g.lineTo(i * 16 + 16, 32); g.lineTo(i * 16 + 32, 0); g.lineTo(i * 16 + 16, 0); g.fill(); }
     const bar = new T.Group();
-    const board = new T.Mesh(new T.BoxGeometry(0.08, 0.6, HALF * 2), [steel, steel, steel, steel, new T.MeshLambertMaterial({ map: G.toTexture(c) }), steel]);
-    board.position.y = 0.3;
+    const stripes = new T.MeshLambertMaterial({ map: G.toTexture(c) });
+    const board = new T.Mesh(new T.BoxGeometry(0.12, 0.7, HALF * 2), [stripes, stripes, steel, steel, stripes, stripes]);
+    board.position.y = 0.35;
     bar.add(board);
     bar.position.set(gx, gy, 0);
     world.add(bar);
     gateBar = bar;
-    // the frame over the gate with the title
-    for (const z of [-HALF - 0.1, HALF + 0.1]) { const p = new T.Mesh(new T.BoxGeometry(0.25, 4.2, 0.25), dark); p.position.set(gx - 1.6, gy + 2.1, z); world.add(p); }
-    const [c2, g2] = G.makeCanvas(512, 96);
-    g2.fillStyle = '#14121f'; g2.fillRect(0, 0, 512, 96);
-    g2.fillStyle = '#ffd400'; g2.fillRect(6, 6, 500, 84);
+    // the start tower behind the gate, with the title on a sign facing you
+    const sx = gx - 2.2, back = -HALF - 0.3;
+    for (const dx of [-2.4, 2.4]) { const p = new T.Mesh(new T.BoxGeometry(0.3, 5.2, 0.3), dark); p.position.set(sx + dx, gy + 2.6, back); world.add(p); }
+    const [c2, g2] = G.makeCanvas(512, 110);
+    g2.fillStyle = '#14121f'; g2.fillRect(0, 0, 512, 110);
+    g2.fillStyle = '#ffd400'; g2.fillRect(8, 8, 496, 94);
     g2.fillStyle = '#14121f';
-    g2.font = `56px ${G.FONT}`; g2.textAlign = 'center'; g2.textBaseline = 'middle';
-    g2.fillText(BMX.TITLE.toUpperCase(), 256, 52); // the game's name stays as it is in both languages
-    const banner = new T.Mesh(new T.BoxGeometry(0.2, 1.0, HALF * 2 + 0.6), [dark, dark, dark, dark, new T.MeshBasicMaterial({ map: G.toTexture(c2) }), dark]);
-    banner.position.set(gx - 1.6, gy + 4.4, 0);
-    banner.rotation.y = 0;
-    world.add(banner);
+    g2.font = `64px ${G.FONT}`; g2.textAlign = 'center'; g2.textBaseline = 'middle';
+    g2.fillText(BMX.TITLE.toUpperCase(), 256, 60); // the game's name stays as it is in both languages
+    const sign = new T.Mesh(new T.PlaneGeometry(5.4, 1.16), new T.MeshBasicMaterial({ map: G.toTexture(c2) }));
+    sign.position.set(sx, gy + 4.7, back + 0.2);
+    world.add(sign);
     // the start hill platform's back wall
     const wall = new T.Mesh(new T.BoxGeometry(6, 3, HALF * 2), lam(G.shade(th.side, -0.1)));
     wall.position.set(-2.4, gy - 1.5 + 0.01, 0);
     world.add(wall);
-    // the finish: a checkered arch (no words on it, so it needs no translating)
+    // the finish: a checkered banner on two posts behind the track, a checkered line across it, flags on top
     const fx0 = trk.finishX, fy = trk.heightAt(fx0);
     const [c3, g3] = G.makeCanvas(256, 64);
     for (let y = 0; y < 4; y++) for (let x = 0; x < 16; x++) { g3.fillStyle = (x + y) % 2 ? '#14121f' : '#ffffff'; g3.fillRect(x * 16, y * 16, 16, 16); }
     const chk = new T.MeshBasicMaterial({ map: G.toTexture(c3) });
-    for (const z of [-HALF - 0.2, HALF + 0.2]) { const p = new T.Mesh(new T.BoxGeometry(0.3, 4.6, 0.3), lam('#ff3d7f')); p.position.set(fx0, fy + 2.3, z); world.add(p); }
-    const top = new T.Mesh(new T.BoxGeometry(0.3, 1.0, HALF * 2 + 0.7), [chk, chk, chk, chk, chk, chk]);
-    top.position.set(fx0, fy + 4.6, 0);
-    world.add(top);
-    const line = new T.Mesh(new T.PlaneGeometry(0.5, HALF * 2), chk);
-    line.rotation.x = -Math.PI / 2; line.rotation.z = Math.PI / 2;
+    for (const dx of [-2.6, 2.6]) { const p = new T.Mesh(new T.BoxGeometry(0.3, 5.0, 0.3), lam('#ff3d7f')); p.position.set(fx0 + dx, fy + 2.5, back); world.add(p); }
+    const ban = new T.Mesh(new T.PlaneGeometry(5.5, 1.3), chk);
+    ban.position.set(fx0, fy + 4.4, back + 0.2);
+    world.add(ban);
+    const line = new T.Mesh(new T.PlaneGeometry(0.6, HALF * 2), chk);
+    line.rotation.x = -Math.PI / 2;
     line.position.set(fx0, fy + 0.02, 0);
     world.add(line);
-    for (const z of [-HALF - 0.2, HALF + 0.2]) {
+    for (const dx of [-2.6, 2.6]) {
       const s = new T.Sprite(new T.SpriteMaterial({ map: G.emojiTexture('🏁'), depthWrite: false }));
-      s.position.set(fx0, fy + 5.6, z); s.scale.set(1.2, 1.2, 1); world.add(s);
+      s.position.set(fx0 + dx, fy + 5.6, back); s.scale.set(1.3, 1.3, 1); world.add(s);
     }
   }
   function setGate(open) { if (gateBar) gateBar.rotation.z += ((open ? -Math.PI / 2 : 0) - gateBar.rotation.z) * 0.25; }
@@ -551,8 +552,8 @@
     const k = 1 - Math.exp(-14 * dt);
     m.g.rotation.z = 0;
     m.tilt.rotation.set(0, 0, 0);
-    m.body.position.set(1.1, 0, 1.0);
-    m.body.rotation.set(0, Math.PI / 2 + 0.25, 0); // turn the boy (who faces +x on the bike) to face the camera
+    m.body.position.set(1.1, 0, 0.6);
+    m.body.rotation.set(0, -Math.PI / 2 + 0.3, 0); // turn the boy (who faces +x on the bike) round to face the camera
     let pose = mode;
     let jump = 0;
     if (mode === 'jumpshot') { const c = (t % 1.4) / 1.4; jump = Math.max(0, Math.sin(c * Math.PI)) * 0.9; }
@@ -632,13 +633,14 @@
     const halfH = Math.tan((v.cam.fov * Math.PI) / 360);
     // want ~26 m across on wide screens; at least 9 m tall
     let D = Math.max(8 / (2 * halfH), 19 / (2 * halfH * aspect));
-    D = Math.min(D, 34) * v.zoom;
+    if (H < 300) D = Math.min(D, 6.5 / (2 * halfH)); // a 2-player half on a phone: closer
+    D = Math.min(D, 28) * v.zoom;
     const ahead = Math.min(7, 0.18 * D * halfH * aspect * 2 * 0.5);
     const k = snap ? 1 : 1 - Math.exp(-3.5 * dt);
     v.y += (y - v.y) * k;
     v.x = x;
-    v.cam.position.set(v.x + ahead, v.y + 3.4, D);
-    v.cam.lookAt(v.x + ahead, v.y + 2.0, 0);
+    v.cam.position.set(v.x + ahead, v.y + 1.2 + 0.12 * D, D);
+    v.cam.lookAt(v.x + ahead, v.y + 0.9 + 0.06 * D, 0);
     v.cam.updateProjectionMatrix();
   }
 

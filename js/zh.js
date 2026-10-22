@@ -35,8 +35,7 @@
     '◀ BACK': '◀ 返回', 'GO! 🏁': '出发！🏁', '← → track · Enter: go · Esc: back': '← → 选赛道 · 回车：出发 · Esc：返回',
     EASY: '简单', NORMAL: '普通',
     // the race
-    'GO!': '出发！', CALL: '叫', 'HIGH FIVE': '击掌', 'BOOST!': '加速！', BEST: '最好',
-    '1st': '第1', '2nd': '第2', '3rd': '第3', '4th': '第4',
+    'GO!': '出发！', CALL: '叫', 'HIGH FIVE': '击掌', 'BOOST!': '加速！', BEST: '最好', '✋ HIGH FIVE!': '✋ 击掌！', 'both press it: T + ENTER': '一起按：T + ENTER',
     'PERFECT!': '完美落地！', 'WOBBLE!': '摇摇晃晃！', 'land flat next time': '下次落地放平一点',
     'OOPS!': '哎呀！', 'land with both wheels': '两个轮子一起落地', 'FINISH!': '到终点啦！',
     'here I come!': '我来啦！', 'YUM!': '好吃！', 'SAYS: BOOST!': '说：加速！',
@@ -64,5 +63,20 @@
       '⬆ 跳起来，⭐ 在空中做技巧，⬇ 压车。▶ 骑车，◀ 刹车；在空中它们让车倾斜。点兄弟的头像叫他来。双人时，屏幕上下两半各有一套按钮。',
   });
   // words built with names or numbers in them
-  L.rule(/^(TEDDY|TOMMY|FOXY|FROGGY)!$/, '$1！');
+  const WHO = '(TEDDY|TOMMY|FOXY|FROGGY)';
+  L.rule(new RegExp(`^${WHO}!$`), '$1！');
+  L.rule(new RegExp(`^${WHO} WINS!$`), '$1 赢啦！');
+  L.rule(new RegExp(`^${WHO} SAYS: BOOST!$`), '$1 说：加速！');
+  L.rule(/^(\d)(st|nd|rd|th)$/, '第$1名');
+  L.rule(/^(\d)(st|nd|rd|th)!$/, '第$1名！');
+  L.rule(/^(\d)(st|nd|rd|th) PLACE!$/, '第$1名！');
+  L.rule(/^(\S+) YUM!$/, '$1 好吃！');
+  L.rule(/^⭐ (\d+) · BEST (.+)$/, '⭐ $1 · 最好 $2');
+  L.rule(/^\+(\d+)( · PERFECT!)? · BOOST!$/, (m, n, p) => `+${n}${p ? ' · 完美落地！' : ''} · 加速！`);
+  // trick combos: "SUPERMAN + BACKFLIP ×2!"
+  const TR = Object.keys(TRICKS).join('|');
+  L.rule(new RegExp(`^((?:${TR})(?: ×\\d)?(?: \\+ (?:${TR})(?: ×\\d)?)*)!$`), (m, list) => list.split(' + ').map((part) => {
+    const [n, x] = part.split(' ×');
+    return TRICKS[n] + (x ? ' ×' + x : '');
+  }).join(' + ') + '！');
 })();

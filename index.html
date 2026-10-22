@@ -134,11 +134,10 @@
   .count.show { opacity: 1; animation: slam 0.35s ease-out; }
   .count.go { color: var(--green); }
   .ibtns { position: fixed; right: max(12px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); display: flex; gap: 8px; pointer-events: auto; }
-  #hud.duo .ibtns { top: 50%; translate: 0 -50%; }
   .ibtn { width: 44px; height: 44px; border-radius: 13px; font-size: 18px; line-height: 1; background: rgba(20, 18, 31, 0.6); border: 2px solid rgba(255, 255, 255, 0.85); display: grid; place-items: center; color: #fff; }
   /* 2 players: the kit's ? and A文 buttons sit on the split line at the left edge, so the left-hand things move over */
   #hud.duo .timebox, #hud.duo .bud, #hud.duo .boost { left: var(--left); }
-  #hud.duo .placebox { top: max(8px, env(safe-area-inset-top)); right: calc(max(12px, env(safe-area-inset-right)) + 8px); font-size: 40px; }
+  #hud.duo .placebox { top: max(8px, env(safe-area-inset-top)); right: calc(max(12px, env(safe-area-inset-right)) + 110px); font-size: 40px; }
   #hud.duo .view.v1 .placebox { top: max(8px, env(safe-area-inset-top)); }
   @media (max-height: 460px) {
     .timebox { padding: 3px 9px; } .timebox .time { font-size: 18px; } .timebox .sub { font-size: 10px; }
@@ -190,6 +189,21 @@
     #touch.duo .tb.trick { right: calc(max(16px, env(safe-area-inset-right)) + 52px); }
     #touch.duo .tb.call { right: calc(max(16px, env(safe-area-inset-right)) + 96px); }
   }
+
+  /* narrow (phones held upright): the map drops under the time, the buttons stack in two columns */
+  @media (max-width: 560px) {
+    .map { left: 12px; translate: none; top: calc(max(10px, env(safe-area-inset-top)) + 62px); width: 56vw; height: 40px; }
+    #hud.duo .map { left: var(--left); top: calc(max(8px, env(safe-area-inset-top)) + 46px); height: 30px; }
+    .bud, .boost, body.touch .boost { top: calc(max(10px, env(safe-area-inset-top)) + 112px); }
+    .tb.fwd { left: var(--left); bottom: calc(max(16px, env(safe-area-inset-bottom)) + 100px); }
+    .tb.trick { right: max(16px, env(safe-area-inset-right)); bottom: calc(max(16px, env(safe-area-inset-bottom)) + 120px); }
+    .tb.down { right: calc(max(16px, env(safe-area-inset-right)) + 116px); bottom: max(16px, env(safe-area-inset-bottom)); }
+    .tb.call { right: calc(max(16px, env(safe-area-inset-right)) + 116px); bottom: calc(max(16px, env(safe-area-inset-bottom)) + 84px); }
+    #touch.duo .tb.fwd { left: calc(var(--left) + 64px); bottom: max(16px, env(safe-area-inset-bottom)); }
+    #touch.duo .tb.trick { right: calc(max(16px, env(safe-area-inset-right)) + 78px); bottom: max(16px, env(safe-area-inset-bottom)); }
+    #touch.duo .tb.call { right: max(16px, env(safe-area-inset-right)); bottom: calc(max(16px, env(safe-area-inset-bottom)) + 80px); }
+  }
+  @media (orientation: portrait) and (max-width: 700px) { body.racing .rotate { display: block; bottom: auto; top: 170px; } }
 
   /* ---------- screens ---------- */
   .screen {
@@ -285,7 +299,6 @@
   }
   #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #1f3a6b; font-family: var(--display); font-size: 28px; letter-spacing: 2px; padding: 24px; text-align: center; }
   .rotate { display: none; position: fixed; left: 50%; bottom: 10px; translate: -50% 0; font-weight: 800; font-size: 13px; background: rgba(20, 18, 31, 0.7); padding: 6px 12px; border-radius: 999px; pointer-events: none; white-space: nowrap; }
-  @media (orientation: portrait) and (max-width: 700px) { body.racing .rotate { display: block; bottom: auto; top: 112px; } }
   @media (max-height: 460px) {
     .logo .l1 { font-size: 46px; -webkit-text-stroke-width: 3px; }
     .tag { font-size: 13px; }

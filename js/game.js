@@ -270,12 +270,12 @@
     if (r.finished) return;
     const id = Kit.roster.buddyFor(r.id), e = Kit.roster.get(id);
     const b = S.buddy;
-    if (b && b.t < 2.1) return; // he's already on his way with a boost
+    if (b && b.t < 2.35) return; // he's already on his way with a boost
     if (!b) S.buddy = { id, m: A.makeRider(id, { tag: false, scale: e.buddyScale }), sc: e.buddyScale, t: 0, x: r.x + 2.2 };
     else S.buddy.t = 0;
     Object.assign(S.buddy, { treat: pick(TREATS), tossed: false, boosted: false, ball: false, popped: false });
     K.swish();
-    toast(0, `${NAMES[id]}!`, 'cool', L.t('here I come!'));
+    toast(0, `${NAMES[id]}!`, 'cool', 'here I come!');
   }
   function updateBuddy(dt) {
     const b = S.buddy;
@@ -284,11 +284,11 @@
     b.t += dt;
     const t = b.t;
     // just ahead of you while he says hello, then right behind you pushing while the boost lasts
-    const want = t < 2.1 ? r.x + 2.2 : t < 4.4 ? r.x - 1.4 : r.x + 1.2;
+    const want = t < 2.35 ? r.x + 2.2 : t < 4.6 ? r.x - 1.4 : r.x + 1.2;
     b.x += (want - b.x) * Math.min(1, (t < 0.05 ? 60 : 5) * dt);
     const f = b.fake || (b.fake = { ground: true, pedal: 1, crashT: 0, trick: null, ang: 0 });
     f.x = b.x; f.y = trk.heightAt(b.x); f.v = r.ground ? r.v : r.vx; f.vx = f.v;
-    const sig = t > 0.35 && t < 1.7;
+    const sig = t > 0.35 && t < 1.5;
     f.peace = b.id === 'tommy' && sig;
     A.place(b.m, f, trk, dt, 2.75);
     if (b.id === 'teddy' && sig) {
@@ -300,23 +300,23 @@
         A.toss('🏀', { x: b.x + 0.2, y: f.y + 2.2, z: 2.75 }, { x: b.x + 4, y: f.y + 4.2, z: 2.2 }, 0.9);
       }
     }
-    if (t > 4.4 && t < 4.9) Kit.people.pose(b.m.p, t * 8, 'wave', 1 - Math.exp(-20 * dt));
-    const pop = t < 0.35 ? easeOutBack(Math.min(1, t / 0.35)) : t > 4.6 ? Math.max(0, 1 - (t - 4.6) / 0.4) : 1;
+    if (t > 4.6 && t < 5.0) Kit.people.pose(b.m.p, t * 8, 'wave', 1 - Math.exp(-20 * dt));
+    const pop = t < 0.35 ? easeOutBack(Math.min(1, t / 0.35)) : t > 4.8 ? Math.max(0, 1 - (t - 4.8) / 0.4) : 1;
     b.m.g.scale.setScalar(b.sc * Math.max(0.001, pop));
     b.m.scale = b.sc * Math.max(0.05, pop);
     if (!b.popped) { b.popped = true; A.puff(b.x, f.y, 2.75, '#ffffff', 10, 4); }
-    if (t >= 1.7 && !b.tossed) {
+    if (t >= 1.5 && !b.tossed) {
       b.tossed = true;
       const treat = b.treat;
-      A.toss(treat, { x: b.x, y: f.y + 1.6, z: 2.75 }, () => ({ x: r.x, y: r.y + 1.5, z: r.z }), 0.5, () => { K.coin(3); toast(0, `${treat} ${L.t('YUM!')}`, 'good'); });
+      A.toss(treat, { x: b.x, y: f.y + 1.6, z: 2.75 }, () => ({ x: r.x, y: r.y + 1.5, z: r.z }), 0.45, () => { K.coin(3); toast(0, `${treat} YUM!`, 'good'); });
     }
-    if (t >= 2.1 && !b.boosted) {
+    if (t >= 2.35 && !b.boosted) {
       b.boosted = true;
       r.boostT = Math.max(r.boostT, 3);
       K.powerup();
-      toast(0, `${NAMES[b.id]} ${L.t('SAYS: BOOST!')}`, 'good');
+      toast(0, `${NAMES[b.id]} SAYS: BOOST!`, 'good', '', 1.3);
     }
-    if (t >= 5.0) { A.puff(b.x, f.y, 2.75, '#ffffff', 8, 3); A.removeRider(b.m); S.buddy = null; }
+    if (t >= 5.2) { A.puff(b.x, f.y, 2.75, '#ffffff', 8, 3); A.removeRider(b.m); S.buddy = null; }
   }
   // 2 players: a high five (both together: a double high five and a little boost for each)
   function highFive(slot) {
@@ -327,20 +327,22 @@
       for (const q of [r, o]) { if (!q.finished) q.boostT = Math.max(q.boostT, 1.6); A.confetti(q.x, q.y, q.z, 24); }
       r.hfAt = o.hfAt = -9;
       K.powerup();
-      toast(0, L.t('DOUBLE HIGH FIVE!'), 'good', L.t('boost for both!'));
-      toast(1, L.t('DOUBLE HIGH FIVE!'), 'good', L.t('boost for both!'));
+      toast(0, 'DOUBLE HIGH FIVE!', 'good', 'boost for both!');
+      toast(1, 'DOUBLE HIGH FIVE!', 'good', 'boost for both!');
     } else {
       K.click();
-      toast(slot, '✋ ' + L.t('HIGH FIVE!'), 'cool', `${L.t('both press it:')} T + ENTER`);
+      toast(slot, '✋ HIGH FIVE!', 'cool', 'both press it: T + ENTER');
       A.sprite && A.puff(r.x, r.y + 1.6, r.z, '#ffe27a', 5, 2);
     }
   }
 
   // ---------- messages ----------
-  const toastT = [0, 0];
-  function toast(v, text, cls, small) {
+  const toastT = [0, 0], toastHold = [0, 0];
+  // prio: the brother's "SAYS: BOOST!" stays up a moment even if a landing message comes along
+  function toast(v, text, cls, small, prio) {
     const el = $$('.view')[v] && $$('.view')[v].querySelector('.msg');
-    if (!el) return;
+    if (!el || (!prio && S.time < toastHold[v])) return;
+    if (prio) toastHold[v] = S.time + prio;
     el.innerHTML = '';
     el.appendChild(document.createTextNode(text));
     if (small) { const s = document.createElement('small'); s.textContent = small; el.appendChild(s); }
@@ -349,7 +351,7 @@
     el.className = 'msg show ' + (cls || '');
     toastT[v] = 1.4;
   }
-  function trickName(t) { return L.t(t.id) + (t.n > 1 ? ' ×' + t.n : ''); }
+  function trickName(t) { return t.id + (t.n > 1 ? ' ×' + t.n : ''); }
 
   function handleEvents() {
     const race = S.race;
@@ -364,21 +366,21 @@
           K.land();
           if (e.tricks.length) {
             K.coin(e.tricks.length + 1);
-            toast(v, e.tricks.map(trickName).join(' + ') + '!', 'good', `+${e.pts}` + (e.perfect ? ' · ' + L.t('PERFECT!') : '') + ' · ' + L.t('BOOST!'));
-          } else if (e.perfect) toast(v, L.t('PERFECT!'), 'good', L.t('BOOST!'));
-          else if (e.wobbly) toast(v, L.t('WOBBLE!'), 'ouch', L.t('land flat next time'));
+            toast(v, e.tricks.map(trickName).join(' + ') + '!', 'good', `+${e.pts}` + (e.perfect ? ' · PERFECT!' : '') + ' · BOOST!');
+          } else if (e.perfect) toast(v, 'PERFECT!', 'good', 'BOOST!');
+          else if (e.wobbly) toast(v, 'WOBBLE!', 'ouch', 'land flat next time');
         } else if (e.type === 'crash') {
           A.puff(r.x, r.y, r.z, DUST[race.trk.theme], 12, 5);
-          if (v >= 0) { K.crash(); toast(v, L.t('OOPS!'), 'ouch', L.t('land with both wheels')); }
+          if (v >= 0) { K.crash(); toast(v, 'OOPS!', 'ouch', 'land with both wheels'); }
         } else if (e.type === 'finish') {
-          if (v >= 0) { K.horn(0.4); toast(v, S.mode === 'tt' ? L.t('FINISH!') : L.t(ORD[r.place - 1] || '4th') + '!', 'good'); }
+          if (v >= 0) { K.horn(0.4); toast(v, S.mode === 'tt' ? 'FINISH!' : (ORD[r.place - 1] || '4th') + '!', 'good'); }
         }
       }
       r.events.length = 0;
     }
   }
 
-  function countdownUI() {
+  function countdownUI(dt) {
     const race = S.race, el = $('#count');
     if (race.phase === 'count') {
       const n = Math.ceil(race.count);
@@ -393,15 +395,16 @@
     } else if (S.lastCount !== -1) {
       S.lastCount = -1;
       if (!S.demo) {
-        el.textContent = L.t('GO!');
+        el.textContent = 'GO!';
         el.className = 'count';
         void el.offsetWidth;
         el.className = 'count show go';
         K.tone({ f: 880, dur: 0.3, vol: 0.3, type: 'square' });
-        setTimeout(() => { if (S.lastCount === -1) el.className = 'count'; }, 650);
+        S.goT = 0.65;
       }
     }
     A.setGate(race.phase === 'go');
+    if (S.goT > 0 && (S.goT -= dt) <= 0) el.className = 'count';
   }
 
   // ---------- the end: the winner's move, confetti, then the results ----------
@@ -424,6 +427,7 @@
     releaseAll();
     recordResults();
     show('celebrate');
+    $('#count').className = 'count';
     A.confetti(win.x + 1, S.celebrate.y + 1.5, win.z + 1, 70);
     K.coin(5);
   }
@@ -464,12 +468,12 @@
     const win = order[0], me = race.riders[0];
     const title = $('#resTitle');
     title.className = 'big';
-    if (S.mode === 'tt') { title.textContent = R.newBest[me.id] ? L.t('NEW BEST!') : L.t('FINISHED!'); if (R.newBest[me.id]) title.classList.add('win'); }
-    else if (win.human) { title.textContent = `${NAMES[win.id]} ${L.t('WINS!')}`; title.classList.add('win'); }
-    else title.textContent = `${L.t(ORD[me.place - 1])} ${L.t('PLACE!')}`;
+    if (S.mode === 'tt') { title.textContent = R.newBest[me.id] ? 'NEW BEST!' : 'FINISHED!'; if (R.newBest[me.id]) title.classList.add('win'); }
+    else if (win.human) { title.textContent = `${NAMES[win.id]} WINS!`; title.classList.add('win'); }
+    else title.textContent = `${ORD[me.place - 1]} PLACE!`;
     const t = B.TRACK_BY_ID[race.trk.id];
     const lvls = Array.from(new Set(race.riders.filter((r) => r.human).map((r) => r.level)));
-    $('#resSub').textContent = `${t.emoji} ${L.t(t.name)} · ${lvls.map((l) => (l === 'easy' ? '🐣 ' + L.t('EASY') : '🔥 ' + L.t('NORMAL'))).join(' / ')}` + (S.mode !== 'tt' ? ` · 🏆 TEDDY ${save.wins.teddy} · TOMMY ${save.wins.tommy}` : '');
+    $('#resSub').innerHTML = `${t.emoji} <span>${t.name}</span> · ${lvls.map((l) => (l === 'easy' ? '🐣 <span>EASY</span>' : '🔥 <span>NORMAL</span>')).join(' / ')}` + (S.mode !== 'tt' ? ` · 🏆 <span data-no-lang>TEDDY ${save.wins.teddy} · TOMMY ${save.wins.tommy}</span>` : '');
     const tb = $('#resTable');
     tb.innerHTML = '';
     const head = document.createElement('tr');
@@ -549,9 +553,9 @@
       const el = views[v];
       el.querySelector('.time').textContent = fmt(r.finished ? r.time : race.t);
       const best = save.best[race.trk.id + '/' + r.level];
-      el.querySelector('.sub').textContent = `⭐ ${r.pts}` + (S.mode === 'tt' && best ? ` · ${L.t('BEST')} ${fmt(best)}` : '');
+      el.querySelector('.sub').textContent = `⭐ ${r.pts}` + (S.mode === 'tt' && best ? ` · BEST ${fmt(best)}` : '');
       const pb = el.querySelector('.placebox');
-      const ptxt = S.mode === 'tt' ? '' : L.t(ORD[r.place - 1] || '4th');
+      const ptxt = S.mode === 'tt' ? '' : ORD[r.place - 1] || '4th';
       if (pb.textContent !== ptxt) { pb.textContent = ptxt; pb.className = 'placebox pop' + (r.place === 1 ? ' p1' : ''); }
       el.querySelector('.boost').classList.toggle('on', r.boostT > 0 && race.phase === 'go');
       el.querySelector('.bud').classList.toggle('on', S.mode !== '2p' && !!S.buddy);
@@ -578,8 +582,8 @@
     const vs = A.views;
     if (S.celebrate) {
       const c = S.celebrate;
-      vs[0].zoom += (0.42 - vs[0].zoom) * Math.min(1, 2.5 * dt);
-      A.follow(vs[0], c.x + 0.2, c.y + 0.2, dt, snap);
+      vs[0].zoom += (0.5 - vs[0].zoom) * Math.min(1, 2.5 * dt);
+      A.follow(vs[0], c.x + 0.6, c.y - (S.screen === 'results' ? 2.4 : 1.4), dt, snap);
       return;
     }
     if (S.demo) {
@@ -600,7 +604,7 @@
     if (race && !S.paused && S.screen !== 'loading') {
       SIM.stepRace(race, dt, inputs);
       handleEvents();
-      countdownUI();
+      countdownUI(dt);
       if (S.screen === 'race') checkEnd(dt);
       if (S.demo && race.riders.every((r) => r.finished || race.t > 90) && race.riders.every((r) => r.x > race.trk.finishX + 14 || race.t > 90)) startDemo();
     }
