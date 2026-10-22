@@ -1,0 +1,4 @@
+[
+ { "label": "prefs", "js": "localStorage.setItem('claudeGames.muted', '1'); localStorage.removeItem('claudeGames.lang'); localStorage.removeItem('bmxTT.v1'); location.reload(); 'reload'", "wait": 4500 },
+ { "label": "title", "js": "game.autoPause = false; game.hold(true); game.step(6.5); JSON.stringify(game.info().riders.map((r) => [r.x, r.ground]))", "wait": 900, "shot": "screenshot" }
+]

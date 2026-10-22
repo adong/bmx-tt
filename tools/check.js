@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /* The headless check, in node: the same rules the page runs (js/tracks.js + js/sim.js), no browser.
-     node tools/check.js              every track finishable on EASY and NORMAL, nobody below the dirt
+     node tools/check.js              every track finishable on EASY and NORMAL, nobody below the dirt, fair races
      node tools/check.js --runs       plus every run's time, crashes, tricks and gap falls
      node tools/check.js --fails      proves the check can fail: each sabotage must be caught
-     node tools/check.js --sabotage wall|coarse|nofloor   run the check with one thing broken (it must say FAIL) */
+     node tools/check.js --sabotage wall|coarse|nofloor|fastCpu   run the check with one thing broken (it must say FAIL) */
 'use strict';
 const fs = require('fs');
 const path = require('path');

@@ -589,7 +589,8 @@
     if (S.demo) {
       const [a, b] = race.riders;
       vs[0].zoom = 1;
-      A.follow(vs[0], (a.x + b.x) / 2 - 1, Math.max(a.y, b.y) - 0.5, dt, snap);
+      // the brothers ride along the bottom, under the title's buttons
+      A.follow(vs[0], (a.x + b.x) / 2 + 1, Math.max(a.y, b.y) + 3.4, dt, snap);
       return;
     }
     for (let v = 0; v < S.views; v++) {
