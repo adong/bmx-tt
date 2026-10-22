@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1f3a6b">
+<title>TT BMX · Teddy &amp; Tommy</title>
+<!-- The game's icon: the same emoji as its card on the dashboard, on a coloured tile. It's the browser tab's icon (the SVG, then
+     a PNG drawn below) and the iPad home screen's (apple-touch-icon). The device's own emoji font draws it: no image files. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='2'%20y='2'%20width='60'%20height='60'%20rx='14'%20fill='%237ed957'%20stroke='%2314121f'%20stroke-width='4'/%3E%3Ctext%20x='32'%20y='44'%20font-size='36'%20text-anchor='middle'%3E%F0%9F%9A%B2%3C/text%3E%3C/svg%3E">
+<script>
+  (function (emoji, tile) {
+    function draw(size, framed) {
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const g = c.getContext('2d');
+      if (!g) return '';
+      const u = size / 64;
+      g.fillStyle = tile;
+      if (framed) { // the tab: a rounded tile with the dashboard's dark outline
+        g.beginPath();
+        if (g.roundRect) g.roundRect(2 * u, 2 * u, 60 * u, 60 * u, 14 * u); else g.rect(2 * u, 2 * u, 60 * u, 60 * u);
+        g.fill();
+        g.lineWidth = 4 * u;
+        g.strokeStyle = '#14121f';
+        g.stroke();
+      } else g.fillRect(0, 0, size, size); // the home screen: iOS rounds the corners itself
+      g.font = `${Math.round(size * (framed ? 0.56 : 0.62))}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+      g.textAlign = 'center';
+      const m = g.measureText(emoji);
+      const up = m.actualBoundingBoxAscent || size * 0.4, down = m.actualBoundingBoxDescent || 0;
+      g.fillText(emoji, size / 2, size / 2 + (up - down) / 2);
+      try { return c.toDataURL('image/png'); } catch (e) { return ''; }
+    }
+    const tab = draw(64, true), home = draw(180, false);
+    if (tab) document.querySelector('link[rel="icon"]').href = tab;
+    if (home) {
+      const l = document.createElement('link');
+      l.rel = 'apple-touch-icon';
+      l.href = home;
+      document.head.appendChild(l);
+    }
+  })('🚲', '#7ed957');
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --yellow: #ffd400;
+    --pink: #ff3d7f;
+    --cyan: #18d4ff;
+    --orange: #ff8a1f;
+    --green: #7ed957;
+    --red: #ff4b5c;
+    --ink: #14121f;
+    --display: 'Bungee', 'Arial Black', Impact, sans-serif;
+    --left: calc(max(10px, env(safe-area-inset-left)) + 56px); /* clear of the kit's ? / A文 / sound buttons on the left edge */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #1f3a6b; color: #fff;
+    font-family: 'Rubik', system-ui, -apple-system, sans-serif;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .hidden { opacity: 0 !important; pointer-events: none !important; visibility: hidden; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  @keyframes pulse { 50% { transform: scale(1.07); } }
+  @keyframes slam { from { transform: scale(2.2) rotate(-8deg); opacity: 0; } }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
+
+  /* ---------- the split line between player 1 (top) and player 2 (bottom) ---------- */
+  #split { position: fixed; left: 0; right: 0; top: 50%; height: 6px; margin-top: -3px; background: var(--ink); border-top: 2px solid var(--yellow); border-bottom: 2px solid var(--yellow); pointer-events: none; }
+
+  /* ---------- HUD, one per player view ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  .view { position: absolute; left: 0; right: 0; top: 0; height: 100%; overflow: hidden; }
+  #hud.duo .view { height: 50%; }
+  #hud.duo .view.v1 { top: 50%; }
+  #hud.solo .view.v1 { display: none; }
+  .timebox {
+    position: absolute; left: max(12px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top));
+    display: flex; flex-direction: column; gap: 2px; padding: 6px 12px; border-radius: 14px;
+    background: rgba(20, 18, 31, 0.6); border: 2px solid rgba(255, 255, 255, 0.75);
+  }
+  .timebox .time { font-family: var(--display); font-size: 24px; line-height: 1; color: var(--yellow); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .timebox .sub { font: 800 12px/1.1 'Rubik', sans-serif; opacity: 0.9; white-space: nowrap; }
+  .placebox {
+    position: absolute; right: max(16px, env(safe-area-inset-right)); top: calc(max(10px, env(safe-area-inset-top)) + 50px);
+    font-family: var(--display); font-size: 50px; line-height: 1; color: #fff;
+    -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink);
+  }
+  .placebox.p1 { color: var(--yellow); }
+  .placebox.pop { animation: slam 0.35s ease-out; }
+  .map { position: absolute; left: 50%; translate: -50% 0; top: max(8px, env(safe-area-inset-top)); width: min(300px, 38vw); height: 46px; opacity: 0.95; }
+  .bud {
+    position: absolute; left: max(12px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 60px);
+    display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; pointer-events: auto;
+    background: rgba(20, 18, 31, 0.6); border: 2px solid rgba(255, 255, 255, 0.75);
+  }
+  .bud img { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #fff; background: radial-gradient(circle at 50% 35%, #ffe2a0, #ff9f1c); object-fit: cover; }
+  .bud .lbl { font: 800 10px/1.1 'Rubik', sans-serif; letter-spacing: 0.5px; white-space: nowrap; }
+  .bud .lbl b { display: block; font-family: var(--display); font-weight: 400; font-size: 12px; }
+  .bud .k { font: 800 11px/1 'Rubik', sans-serif; padding: 4px 6px; border-radius: 6px; background: #fff; color: var(--ink); white-space: nowrap; }
+  .bud.on { border-color: var(--yellow); box-shadow: 0 0 16px rgba(255, 212, 0, 0.8); }
+  .bud.on img { border-color: var(--yellow); animation: pulse 0.7s ease-in-out infinite; }
+  body.touch .bud { display: none; }
+  .boost {
+    position: absolute; left: max(12px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 112px);
+    font-family: var(--display); font-size: 16px; color: var(--ink); background: var(--yellow); border: 3px solid var(--ink); border-radius: 12px; padding: 3px 10px;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .boost.on { opacity: 1; animation: pulse 0.4s ease-in-out infinite; }
+  body.touch .boost { top: calc(max(10px, env(safe-area-inset-top)) + 60px); }
+  .msg {
+    position: absolute; left: 0; right: 0; top: 24%; text-align: center; font-family: var(--display); opacity: 0;
+    font-size: clamp(24px, 5vw, 58px); line-height: 1.05; color: var(--yellow); padding: 0 12px;
+    -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--pink), 0 9px 0 var(--ink);
+    transition: opacity 0.25s;
+  }
+  .msg small { display: block; font-size: 0.5em; color: #fff; text-shadow: 0 3px 0 var(--ink); }
+  #hud.duo .msg { font-size: clamp(18px, 3.6vw, 40px); top: 26%; }
+  .msg.show { opacity: 1; animation: slam 0.35s cubic-bezier(.2, 1.6, .4, 1); }
+  .msg.cool { color: var(--cyan); text-shadow: 0 5px 0 var(--yellow), 0 9px 0 var(--ink); }
+  .msg.good { color: var(--green); text-shadow: 0 5px 0 #1a7a3a, 0 9px 0 var(--ink); }
+  .msg.ouch { color: #ffb0c8; text-shadow: 0 5px 0 #6a3d8a, 0 9px 0 var(--ink); }
+  .count {
+    position: fixed; left: 0; right: 0; top: 34%; text-align: center; font-family: var(--display); font-size: clamp(70px, 16vw, 170px); line-height: 1;
+    color: #fff; -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; text-shadow: 0 8px 0 var(--pink), 0 14px 0 var(--ink); opacity: 0; pointer-events: none;
+  }
+  .count.show { opacity: 1; animation: slam 0.35s ease-out; }
+  .count.go { color: var(--green); }
+  .ibtns { position: fixed; right: max(12px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); display: flex; gap: 8px; pointer-events: auto; }
+  #hud.duo .ibtns { top: 50%; translate: 0 -50%; }
+  .ibtn { width: 44px; height: 44px; border-radius: 13px; font-size: 18px; line-height: 1; background: rgba(20, 18, 31, 0.6); border: 2px solid rgba(255, 255, 255, 0.85); display: grid; place-items: center; color: #fff; }
+  /* 2 players: the kit's ? and A文 buttons sit on the split line at the left edge, so the left-hand things move over */
+  #hud.duo .timebox, #hud.duo .bud, #hud.duo .boost { left: var(--left); }
+  #hud.duo .placebox { top: max(8px, env(safe-area-inset-top)); right: calc(max(12px, env(safe-area-inset-right)) + 8px); font-size: 40px; }
+  #hud.duo .view.v1 .placebox { top: max(8px, env(safe-area-inset-top)); }
+  @media (max-height: 460px) {
+    .timebox { padding: 3px 9px; } .timebox .time { font-size: 18px; } .timebox .sub { font-size: 10px; }
+    .map { height: 34px; width: min(220px, 34vw); }
+    .placebox { font-size: 34px; top: calc(max(8px, env(safe-area-inset-top)) + 48px); }
+    #hud.duo .placebox { font-size: 26px; -webkit-text-stroke-width: 2px; }
+    #hud.duo .timebox .time { font-size: 14px; } #hud.duo .timebox .sub { display: none; }
+    #hud.duo .map { height: 26px; }
+    .ibtn { width: 38px; height: 38px; }
+  }
+
+  /* ---------- touch: brake / pedal on the left, jump / pump / trick / brother on the right, one set per view ---------- */
+  #touch { position: fixed; inset: 0; pointer-events: none; }
+  body:not(.touch) #touch { display: none; }
+  .tpad { position: absolute; left: 0; right: 0; top: 0; height: 100%; }
+  #touch.duo .tpad { height: 50%; }
+  #touch.duo .tpad.p1 { top: 50%; }
+  #touch.solo .tpad.p1 { display: none; }
+  .tb {
+    position: absolute; width: 84px; height: 84px; border-radius: 50%; font-size: 34px; line-height: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    background: linear-gradient(160deg, #ffe066, var(--yellow)); border: 4px solid #fff; box-shadow: 0 6px 0 var(--ink); touch-action: none; pointer-events: auto; color: var(--ink);
+  }
+  .tb small { font: 800 10px/1 'Rubik', sans-serif; letter-spacing: 0.5px; }
+  .tb.on { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); filter: brightness(1.15); }
+  .tb.back { left: var(--left); bottom: max(16px, env(safe-area-inset-bottom)); background: linear-gradient(160deg, #ff9fb8, var(--pink)); }
+  .tb.fwd { left: calc(var(--left) + 98px); bottom: max(16px, env(safe-area-inset-bottom)); background: linear-gradient(160deg, #a8ffd0, var(--green)); }
+  .tb.jump { right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); width: 104px; height: 104px; font-size: 42px; background: linear-gradient(160deg, #9ff0ff, var(--cyan)); }
+  .tb.trick { right: calc(max(16px, env(safe-area-inset-right)) + 116px); bottom: max(16px, env(safe-area-inset-bottom)); background: linear-gradient(160deg, #ffd0a0, var(--orange)); }
+  .tb.down { right: calc(max(16px, env(safe-area-inset-right)) + 24px); bottom: calc(max(16px, env(safe-area-inset-bottom)) + 118px); width: 70px; height: 70px; font-size: 26px; background: linear-gradient(160deg, #e0d0ff, #9b6bff); }
+  .tb.call { right: calc(max(16px, env(safe-area-inset-right)) + 116px); bottom: calc(max(16px, env(safe-area-inset-bottom)) + 100px); width: 74px; height: 74px; background: radial-gradient(circle at 50% 35%, #ffe2a0, #ff9f1c); overflow: hidden; padding: 0; }
+  .tb.call img { width: 100%; height: 100%; object-fit: cover; }
+  .tb.call small { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; color: #fff; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; font-size: 9px; }
+  #touch.duo .tb { transform: scale(0.66); }
+  #touch.duo .tb.back, #touch.duo .tb.fwd { transform-origin: left bottom; }
+  #touch.duo .tb.fwd { left: calc(var(--left) + 64px); }
+  #touch.duo .tb.jump, #touch.duo .tb.trick, #touch.duo .tb.down, #touch.duo .tb.call { transform-origin: right bottom; }
+  #touch.duo .tb.trick { right: calc(max(16px, env(safe-area-inset-right)) + 78px); }
+  #touch.duo .tb.down { display: none; }
+  #touch.duo .tb.call { right: calc(max(16px, env(safe-area-inset-right)) + 150px); bottom: max(16px, env(safe-area-inset-bottom)); }
+  @media (max-height: 460px) {
+    .tb { width: 70px; height: 70px; font-size: 28px; }
+    .tb.fwd { left: calc(var(--left) + 82px); }
+    .tb.jump { width: 88px; height: 88px; font-size: 36px; }
+    .tb.trick { right: calc(max(16px, env(safe-area-inset-right)) + 98px); }
+    .tb.down { width: 58px; height: 58px; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 98px); right: calc(max(16px, env(safe-area-inset-right)) + 16px); }
+    .tb.call { width: 62px; height: 62px; right: calc(max(16px, env(safe-area-inset-right)) + 176px); bottom: max(16px, env(safe-area-inset-bottom)); }
+    #touch.duo .tb { transform: scale(0.5); }
+    #touch.duo .tb.fwd { left: calc(var(--left) + 44px); }
+    #touch.duo .tb.trick { right: calc(max(16px, env(safe-area-inset-right)) + 52px); }
+    #touch.duo .tb.call { right: calc(max(16px, env(safe-area-inset-right)) + 96px); }
+  }
+
+  /* ---------- screens ---------- */
+  .screen {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+    gap: clamp(8px, 1.8vh, 16px); padding: 16px 16px 16px var(--left); text-align: center; transition: opacity 0.3s;
+    background: linear-gradient(180deg, rgba(20, 24, 60, 0.1), rgba(16, 18, 40, 0.7));
+    overflow-y: auto; justify-content: safe center;
+  }
+  .logo { font-family: var(--display); line-height: 0.95; transform: rotate(-3deg); }
+  .logo .l1 { display: block; font-size: clamp(48px, 10vw, 108px); color: var(--yellow); -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; text-shadow: 0 7px 0 var(--pink), 0 13px 0 var(--ink); }
+  .logo .bike { display: inline-block; animation: bob 0.8s ease-in-out infinite; -webkit-text-stroke: 0; }
+  .tag { font-weight: 800; font-size: clamp(15px, 2.3vw, 21px); text-shadow: 0 2px 0 var(--ink); }
+  .btn {
+    font-family: var(--display); font-size: clamp(18px, 3vw, 25px); color: var(--ink);
+    background: var(--yellow); border: 4px solid var(--ink); border-radius: 20px; padding: 11px 24px;
+    box-shadow: 0 8px 0 var(--ink), 0 14px 30px rgba(0, 0, 0, 0.3); transition: transform 0.08s, box-shadow 0.08s;
+  }
+  .btn small { display: block; font: 800 12px/1.2 'Rubik', sans-serif; margin-top: 3px; }
+  .btn:active { transform: translateY(5px); box-shadow: 0 3px 0 var(--ink); }
+  .btn.alt { background: var(--cyan); }
+  .btn.pink { background: #ff8ab8; }
+  .btn.ghost { background: rgba(255, 255, 255, 0.9); }
+  .btn.small { font-size: clamp(15px, 2.4vw, 19px); padding: 8px 18px; }
+  .btn.pulse { animation: pulse 1.2s ease-in-out infinite; }
+  .modes, .btnrow, .selbtns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .row .h, .pickrow .h { font-family: var(--display); font-size: 15px; letter-spacing: 1px; text-shadow: 0 2px 0 var(--ink); }
+  .opt {
+    display: flex; align-items: center; gap: 8px; padding: 7px 14px 7px 10px; border-radius: 14px; text-align: left;
+    background: rgba(20, 18, 31, 0.55); border: 3px solid rgba(255, 255, 255, 0.7); transition: transform 0.12s;
+  }
+  .opt .e { font-size: 28px; }
+  .opt b { display: block; font-family: var(--display); font-weight: 400; font-size: 17px; }
+  .opt small { font-size: 11px; font-weight: 700; opacity: 0.9; }
+  .opt.on { background: var(--yellow); color: var(--ink); border-color: var(--ink); box-shadow: 0 5px 0 var(--ink); transform: translateY(-2px); }
+  .keys {
+    display: grid; grid-template-columns: auto auto auto; gap: 4px 16px; align-items: center; text-align: left;
+    padding: 10px 16px; border-radius: 16px; background: rgba(20, 18, 31, 0.6); border: 2px solid rgba(255, 255, 255, 0.6);
+    font-size: 13px; font-weight: 700;
+  }
+  .keys .h { font-family: var(--display); font-size: 12px; color: #8cc2ff; }
+  .keys .h.p2 { color: #ffb02e; }
+  kbd {
+    display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; margin: 1px;
+    font: 700 12px/1 system-ui, sans-serif; color: var(--ink); background: #fff; border-radius: 6px; box-shadow: 0 2px 0 #9aa;
+  }
+  .touch-hint { display: none; font-weight: 700; font-size: 14px; max-width: 560px; text-shadow: 0 2px 0 var(--ink); }
+  body.touch .keys { display: none; }
+  body.touch .touch-hint { display: block; }
+  .credit { font-size: 12px; opacity: 0.8; }
+  .hint { font-size: 13px; font-weight: 700; opacity: 0.85; text-shadow: 0 2px 0 var(--ink); }
+  body.touch .hint { display: none; }
+
+  /* ---------- the pick screen: riders, then a track ---------- */
+  .seltitle { font-family: var(--display); font-size: clamp(24px, 4.5vw, 44px); color: var(--yellow); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); }
+  .pickrow { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .cards { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .card {
+    position: relative; padding: 6px 10px 8px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 112px;
+    background: rgba(20, 18, 31, 0.6); border: 3px solid rgba(255, 255, 255, 0.55); transition: transform 0.12s;
+  }
+  .card img { width: 74px; height: 74px; border-radius: 14px; background: radial-gradient(circle at 50% 35%, #ffe2a0, #ff9f1c); }
+  .card .em { font-size: 44px; line-height: 1.1; }
+  .card b { font-family: var(--display); font-weight: 400; font-size: 15px; }
+  .card small { font-size: 11px; font-weight: 700; opacity: 0.85; }
+  .card .best { font-size: 12px; font-weight: 800; color: var(--yellow); }
+  .card .who { position: absolute; top: -10px; right: -8px; font-family: var(--display); font-size: 12px; padding: 2px 7px; border-radius: 999px; border: 2px solid var(--ink); color: var(--ink); background: #8cc2ff; }
+  .card .who.p2 { background: #ffb02e; }
+  .card.on { background: var(--yellow); color: var(--ink); border-color: var(--ink); box-shadow: 0 5px 0 var(--ink); transform: translateY(-3px); }
+  .card.on .best { color: var(--ink); }
+  .lvl2 { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .lvl2 .opt { padding: 4px 10px 4px 6px; }
+  .lvl2 .opt .e { font-size: 20px; }
+
+  /* ---------- pause, results ---------- */
+  .big {
+    font-family: var(--display); font-size: clamp(36px, 8vw, 84px); color: var(--cyan); transform: rotate(-4deg); line-height: 1;
+    -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; text-shadow: 0 7px 0 var(--yellow), 0 12px 0 var(--ink);
+  }
+  #resTitle.win { color: var(--yellow); text-shadow: 0 7px 0 var(--pink), 0 12px 0 var(--ink); }
+  #results { background: linear-gradient(180deg, rgba(20, 24, 60, 0), rgba(16, 18, 40, 0.55) 45%, rgba(16, 18, 40, 0.75)); justify-content: flex-end; padding-bottom: 22px; }
+  .stats { border-collapse: separate; border-spacing: 0 4px; font-weight: 800; font-size: 15px; background: rgba(20, 18, 31, 0.6); border-radius: 16px; padding: 6px 12px; }
+  .stats td, .stats th { padding: 2px 10px; text-align: left; white-space: nowrap; }
+  .stats th { font-family: var(--display); font-weight: 400; font-size: 11px; color: #8cc2ff; }
+  .stats td.who img { width: 28px; height: 28px; vertical-align: middle; border-radius: 8px; margin-right: 6px; background: radial-gradient(circle at 50% 35%, #ffe2a0, #ff9f1c); }
+  .stats td.t { font-variant-numeric: tabular-nums; }
+  .stats .new { color: var(--yellow); }
+  .stats tr.me td { color: var(--yellow); }
+  #menuMute {
+    position: fixed; right: max(14px, env(safe-area-inset-right)); top: max(14px, env(safe-area-inset-top));
+    width: 54px; height: 54px; border-radius: 16px; font-size: 26px; line-height: 1; display: grid; place-items: center;
+    background: rgba(20, 18, 31, 0.6); border: 3px solid #fff; box-shadow: 0 4px 0 var(--ink); transition: opacity 0.3s; color: #fff;
+  }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #1f3a6b; font-family: var(--display); font-size: 28px; letter-spacing: 2px; padding: 24px; text-align: center; }
+  .rotate { display: none; position: fixed; left: 50%; bottom: 10px; translate: -50% 0; font-weight: 800; font-size: 13px; background: rgba(20, 18, 31, 0.7); padding: 6px 12px; border-radius: 999px; pointer-events: none; white-space: nowrap; }
+  @media (orientation: portrait) and (max-width: 700px) { body.racing .rotate { display: block; bottom: auto; top: 112px; } }
+  @media (max-height: 460px) {
+    .logo .l1 { font-size: 46px; -webkit-text-stroke-width: 3px; }
+    .tag { font-size: 13px; }
+    .btn { font-size: 15px; padding: 6px 14px; border-radius: 14px; box-shadow: 0 5px 0 var(--ink); }
+    .btn small { font-size: 10px; }
+    .opt { padding: 3px 10px 3px 6px; } .opt .e { font-size: 20px; } .opt b { font-size: 13px; } .opt small { font-size: 9px; }
+    .keys, #select .hint, #results .hint, .credit { display: none; }
+    .card { min-width: 84px; padding: 3px 6px 4px; } .card img { width: 46px; height: 46px; } .card .em { font-size: 28px; } .card b { font-size: 12px; } .card small { display: none; }
+    .seltitle { font-size: 22px; }
+    .big { font-size: 34px; }
+    .stats { font-size: 12px; } .stats td.who img { width: 20px; height: 20px; }
+    #results { padding-bottom: 8px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="split" class="hidden"></div>
+
+<div id="hud" class="hidden solo">
+  <div class="view v0">
+    <div class="timebox"><b class="time">0:00.0</b><span class="sub"></span></div>
+    <canvas class="map" width="600" height="92"></canvas>
+    <div class="placebox"></div>
+    <div class="bud" data-p="0"><img alt=""><span class="lbl">CALL<b></b></span><span class="k">T</span></div>
+    <div class="boost">BOOST!</div>
+    <div class="msg"></div>
+  </div>
+  <div class="view v1">
+    <div class="timebox"><b class="time">0:00.0</b><span class="sub"></span></div>
+    <canvas class="map" width="600" height="92"></canvas>
+    <div class="placebox"></div>
+    <div class="bud" data-p="1"><img alt=""><span class="lbl">HIGH FIVE<b></b></span><span class="k">ENTER</span></div>
+    <div class="boost">BOOST!</div>
+    <div class="msg"></div>
+  </div>
+  <div class="ibtns">
+    <button id="pauseBtn" class="ibtn" title="Pause (P)" aria-label="Pause">❚❚</button>
+    <button class="ibtn muteBtn" title="Sound (M)" aria-label="Sound on or off">🔊</button>
+  </div>
+</div>
+<div id="count" class="count"></div>
+
+<div id="touch" class="hidden solo">
+  <div class="tpad p0">
+    <button class="tb back" data-act="back" aria-label="Brake, lean back"><span>◀</span><small>BRAKE</small></button>
+    <button class="tb fwd" data-act="fwd" aria-label="Pedal, lean forward"><span>▶</span><small>PEDAL</small></button>
+    <button class="tb call" data-act="call" aria-label="Call your brother"><img alt=""><small></small></button>
+    <button class="tb down" data-act="down" aria-label="Pump"><span>⬇</span><small>PUMP</small></button>
+    <button class="tb trick" data-act="trick" aria-label="Trick"><span>⭐</span><small>TRICK</small></button>
+    <button class="tb jump" data-act="jump" aria-label="Jump"><span>⬆</span><small>JUMP</small></button>
+  </div>
+  <div class="tpad p1">
+    <button class="tb back" data-act="back" aria-label="Brake, lean back"><span>◀</span><small>BRAKE</small></button>
+    <button class="tb fwd" data-act="fwd" aria-label="Pedal, lean forward"><span>▶</span><small>PEDAL</small></button>
+    <button class="tb call" data-act="call" aria-label="High five"><img alt=""><small></small></button>
+    <button class="tb down" data-act="down" aria-label="Pump"><span>⬇</span><small>PUMP</small></button>
+    <button class="tb trick" data-act="trick" aria-label="Trick"><span>⭐</span><small>TRICK</small></button>
+    <button class="tb jump" data-act="jump" aria-label="Jump"><span>⬆</span><small>JUMP</small></button>
+  </div>
+</div>
+
+<div id="title" class="screen hidden">
+  <div class="logo" data-no-lang><span class="l1"><span class="bike">🚲</span> <span id="logoText"></span></span></div>
+  <p class="tag" id="tagline"></p>
+  <div class="modes">
+    <button class="btn pulse" data-mode="race">🏁 RACE<small>race Foxy and Froggy</small></button>
+    <button class="btn alt" data-mode="2p">👫 2 PLAYERS<small>Teddy against Tommy</small></button>
+    <button class="btn pink" data-mode="tt">⏱️ TIME TRIAL<small>beat your best time</small></button>
+  </div>
+  <div class="row" role="radiogroup" aria-label="Difficulty">
+    <span class="h">LEVEL</span>
+    <button class="opt" data-level="easy" role="radio"><span class="e">🐣</span><span><b>EASY</b><small>the bike pedals · always lands · makes every jump</small></span></button>
+    <button class="opt" data-level="normal" role="radio"><span class="e">🔥</span><span><b>NORMAL</b><small>you pedal · land straight · flips!</small></span></button>
+  </div>
+  <div class="keys">
+    <span></span><span class="h">PLAYER 1</span><span class="h p2">PLAYER 2</span>
+    <span>pedal · brake (in the air: lean)</span><span><kbd>D</kbd> · <kbd>A</kbd></span><span><kbd>→</kbd> · <kbd>←</kbd></span>
+    <span>jump · pump</span><span><kbd>W</kbd> <kbd>Space</kbd> · <kbd>S</kbd></span><span><kbd>↑</kbd> · <kbd>↓</kbd></span>
+    <span>trick in the air</span><span><kbd>F</kbd></span><span><kbd>L</kbd></span>
+    <span>call your brother</span><span><kbd>T</kbd></span><span><kbd>Enter</kbd></span>
+  </div>
+  <p class="touch-hint">⬆ jumps, ⭐ does a trick in the air. ▶ pedals and ◀ brakes; in the air they lean the bike for flips. Tap your brother's face to call him!</p>
+  <div class="credit">built with <b>Claude Code</b></div>
+</div>
+
+<div id="select" class="screen hidden">
+  <div id="selTitle" class="seltitle">PICK YOUR RIDER</div>
+  <div class="pickrow"><div class="cards" id="riders" role="listbox" aria-label="Riders"></div></div>
+  <div class="lvl2" id="lvl2"></div>
+  <div class="pickrow"><span class="h">PICK A TRACK</span><div class="cards" id="tracks" role="listbox" aria-label="Tracks"></div></div>
+  <div class="selbtns">
+    <button id="selBack" class="btn small ghost">◀ BACK</button>
+    <button id="selGo" class="btn small pulse">GO! 🏁</button>
+  </div>
+  <p class="hint">← → track · Enter: go · Esc: back</p>
+</div>
+
+<div id="pause" class="screen hidden">
+  <div class="big">PAUSED</div>
+  <div class="btnrow">
+    <button id="resumeBtn" class="btn">▶ RESUME</button>
+    <button id="restartBtn" class="btn alt small">↻ RESTART</button>
+    <button id="quitBtn" class="btn small ghost">MENU</button>
+  </div>
+  <p class="hint">P · Esc to resume · Q for the menu · M sound</p>
+</div>
+
+<div id="results" class="screen hidden">
+  <div id="resTitle" class="big">1st PLACE!</div>
+  <p id="resSub" class="tag"></p>
+  <table id="resTable" class="stats"></table>
+  <div class="btnrow">
+    <button id="againBtn" class="btn pulse">↻ PLAY AGAIN</button>
+    <button id="nextBtn" class="btn alt small">NEXT TRACK ▶</button>
+    <button id="menuBtn" class="btn ghost small">MENU</button>
+  </div>
+  <p class="hint">Enter: play again · N: next track · Esc: menu</p>
+</div>
+
+<button id="menuMute" class="muteBtn hidden" title="Sound on / off (M)" aria-label="Sound on or off">🔊</button>
+
+<div id="loading">LOADING…</div>
+<div class="rotate">↻ Turn sideways to see more track!</div>
+
+<script src="kit/three.min.js"></script>
+<script src="kit/gfx.js"></script>
+<script src="kit/people.js"></script>
+<script src="kit/roster.js"></script>
+<script src="kit/portraits.js"></script>
+<script src="kit/sound.js"></script>
+<script src="kit/lang.js"></script>
+<script src="kit/help.js"></script>
+<script src="js/title.js"></script>
+<script src="js/tracks.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/art.js"></script>
+<script src="js/game.js"></script>
+<script src="js/keys.js"></script>
+<script src="js/zh.js"></script>
+</body>
+</html>
