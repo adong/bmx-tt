@@ -2126,8 +2126,8 @@ document.title = BMX.TITLE + ' · Teddy & Tommy';
     { id: 'TAILWHIP', pts: 300, dur: 0.7 },
   ];
   const CPUS = {
-    foxy: { id: 'foxy', name: 'FOXY', emoji: '🦊', mult: { easy: 0.9, normal: 0.985 }, tricky: 0.5 },
-    froggy: { id: 'froggy', name: 'FROGGY', emoji: '🐸', mult: { easy: 0.86, normal: 0.965 }, tricky: 0.8 },
+    foxy: { id: 'foxy', name: 'FOXY', emoji: '🦊', mult: { easy: 0.9, normal: 0.965 }, tricky: 0.5 },
+    froggy: { id: 'froggy', name: 'FROGGY', emoji: '🐸', mult: { easy: 0.86, normal: 0.95 }, tricky: 0.8 },
   };
   // sabotage switches for the check's "can it fail?" runs: never on in the game
   const sab = (BMX.sabotage = BMX.sabotage || {});
@@ -2335,16 +2335,21 @@ document.title = BMX.TITLE + ' · Teddy & Tommy';
     const easy = r.level === 'easy';
     let target = (easy ? 7.6 : 10.4) * r.mult;
     let lead = -Infinity;
+    inp.back = false;
     for (const q of race.riders) if (q.human) lead = Math.max(lead, q.x);
     if (lead > -Infinity) {
       const gap = r.x - lead;
       // on EASY they wait for the kids when ahead and keep close when behind; on NORMAL only a little
-      if (easy) { if (gap > 3) target *= gap > 12 ? 0.55 : 0.78; else if (gap < -14) target *= 1.08; }
+      if (easy) {
+        if (gap > -1) target *= gap > 6 ? 0.35 : 0.62; // level with him or ahead: ease off
+        else if (gap < -14) target *= 1.08;
+        inp.back = r.ground && gap > 9; // well ahead of the kid: wait for him
+      }
       else if (gap > 18) target *= 0.9;
       else if (gap < -18) target *= 1.05;
     }
     const s = race.trk.slopeAt(r.x);
-    inp.fwd = r.ground && r.v < target; inp.coast = r.v >= target; inp.back = false;
+    inp.fwd = r.ground && r.v < target; inp.coast = r.v >= target;
     inp.down = !easy && s < -0.05;
     inp.trick = !easy && !r.ground && !r.trick && r.pred && r.pred.t - r.air > 0.85 && r.airTricks.length < 2 && race.rng() < r.cpu.tricky * 0.05;
     return inp;
@@ -2363,7 +2368,7 @@ document.title = BMX.TITLE + ' · Teddy & Tommy';
     const race = { trk, riders: [], t: 0, count: o.count == null ? 3 : o.count, phase: o.count === 0 ? 'go' : 'count', acc: 0, rng: rng(o.seed || 7), events: [] };
     for (const d of o.riders) {
       const r = makeRider(d, trk);
-      if (d.cpu) { r.cpu = CPUS[d.cpu]; r.mult = r.cpu.mult[r.level]; r.name = r.cpu.name; }
+      if (d.cpu) { r.cpu = CPUS[d.cpu]; r.mult = r.cpu.mult[r.level] * (sab.fastCpu ? 1.3 : 1); r.name = r.cpu.name; }
       race.riders.push(r);
     }
     return race;
@@ -2378,7 +2383,7 @@ document.title = BMX.TITLE + ' · Teddy & Tommy';
     }
     race.t += DT;
     for (const r of race.riders) {
-      const inp = r.finished ? coastInput(r, race) : r.human ? inputs[r.slot] || NONE : r.pilot ? r.pilot(r, race) : cpuInput(r, race);
+      const inp = r.finished ? coastInput(r, race) : r.pilot ? r.pilot(r, race) : r.human ? inputs[r.slot] || NONE : cpuInput(r, race);
       stepRider(r, race.trk, inp, DT, race);
     }
     // places: finished riders by time, then the rest by how far they've got
@@ -2474,13 +2479,28 @@ document.title = BMX.TITLE + ' · Teddy & Tommy';
     const under = runs.filter((r) => r.below > 0);
     const easyCrash = runs.filter((r) => r.level === 'easy' && r.crashes);
     const goodCrash = runs.filter((r) => r.who === 'good' && r.crashes);
+    // races: a pretend kid (counted as a human, so Foxy and Froggy go easy on him) against both CPUs
+    const races = [];
+    for (const t of BMX.TRACKS) {
+      for (const [level, who] of [['easy', 'idle'], ['easy', 'kid'], ['normal', 'good'], ['normal', 'pro']]) {
+        for (const seed of who === 'kid' ? [1, 2, 3] : [1]) {
+          const race = createRace({ track: t.id, count: 0, seed, riders: [{ id: 'tommy', human: true, slot: 0, level, pilot: PILOTS[who](seed) }, { id: 'foxy', cpu: 'foxy', level }, { id: 'froggy', cpu: 'froggy', level }] });
+          while (race.t < 150 && !race.riders.every((r) => r.finished)) tick(race, []);
+          races.push({ track: t.id, level, who: who + (who === 'kid' ? '#' + seed : ''), place: race.riders[0].place, time: race.riders[0].time, cpu: race.riders.slice(1).map((r) => r.time) });
+        }
+      }
+    }
+    const easyLost = races.filter((r) => r.level === 'easy' && r.place !== 1);
+    const proLost = races.filter((r) => r.who === 'pro' && r.place !== 1);
     const tests = [
       { name: 'finishable', ok: !unfinished.length, detail: unfinished.length ? unfinished.map((r) => `${r.track}/${r.level}/${r.who} stopped at ${r.x.toFixed(0)} of ${r.len.toFixed(0)} m`).join('; ') : `${runs.length} runs home` },
       { name: 'ground', ok: !under.length, detail: under.length ? under.map((r) => `${r.track}/${r.level}/${r.who} ${r.below} steps below, by up to ${r.maxBelow.toFixed(2)} m`).join('; ') : 'never below the dirt' },
       { name: 'easyNoCrash', ok: !easyCrash.length, detail: easyCrash.length ? easyCrash.map((r) => `${r.track}/${r.who} ${r.crashes}`).join('; ') : 'EASY never crashes' },
+      { name: 'easyRace', ok: !easyLost.length, detail: easyLost.length ? easyLost.map((r) => `${r.track}/${r.who} came ${r.place}`).join('; ') : `on EASY the pretend kid beats Foxy and Froggy in all ${races.filter((r) => r.level === 'easy').length} races` },
+      { name: 'normalRace', ok: !proLost.length, detail: proLost.length ? proLost.map((r) => `${r.track}/pro came ${r.place}`).join('; ') : `on NORMAL pumping, hopping and tricks win; just pedalling places ${races.filter((r) => r.who === 'good').map((r) => r.place).join(',')}` },
       { name: 'goodNoCrash', ok: !goodCrash.length, detail: goodCrash.length ? goodCrash.map((r) => `${r.track} ${r.crashes}`).join('; ') : 'just pedalling on NORMAL never crashes' },
     ];
-    return { ok: tests.every((t) => t.ok), tests, runs };
+    return { ok: tests.every((t) => t.ok), tests, runs, races };
   }
 
   // the check must be able to fail: each sabotage breaks one rule and the check has to notice
@@ -2488,6 +2508,7 @@ document.title = BMX.TITLE + ' · Teddy & Tommy';
     ['wall', 'finishable', 'an unclimbable 6 m wall before every finish line'],
     ['coarse', 'ground', 'the ground looked at only every 4th step'],
     ['nofloor', 'ground', 'no ground under a flying rider'],
+    ['fastCpu', 'easyRace', 'Foxy and Froggy 30% faster'],
   ];
   function checkFails() {
     const out = [];
